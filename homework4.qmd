@@ -1,0 +1,345 @@
+---
+title: "Homework 4"
+format: html
+editor: visual
+---
+
+# Task 0: Add appropriate libraries
+
+```{r}
+library(tidyverse)
+```
+
+# Task 1: Conceptual Questions
+
+1.  If your working directory is myfolder/homework/, what relative path would you specify to get the file located at myfolder/MyData.csv?
+
+> ../MyData.csv
+
+2.  What are the major benefits of using R projects?
+
+> You have a separate environment, with its own relative references, environment variables, and included libraries.
+
+3.  What is git and what is github?
+
+> Git is a protocol for version control of digital materials. Practically, **git** and **github** are often used interchangeably to reference the entire system of collaborative change management and version control, especially in software development and documentation. **Github** is the platform that implements **git** and enables efficient, reliable, tracked collaboration and sharing of artifacts across repositories.
+
+4.  What are the two main differences between a tibble and a data.frame?
+
+> A `data.frame` is an object of BaseR. A `tibble` is part of the *tidyverse* environment. Where a `data.frame` has some limitations in flexibility of selections, filters, formats, a `tibble` is built with robust, flexible, and consistent controls in mind. Tibbles play nice across *tidyverse* functions and also natively print with friendly, useful formatting. It is essentially a **better** `data.frame`.
+
+5.  Rewrite the following nested function call using BaseR’s chaining operator:
+
+```{r}
+arrange(filter(select(as_tibble(iris), starts_with("Petal"), Species),
+Petal.Length < 1.55), Species)
+```
+
+```{r}
+as_tibble(iris) |>
+  select(starts_with("Petal"), Species) |>
+  filter(Petal.Length < 1.55) |>
+  arrange(Species)
+```
+
+# Task 2: Reading Delimited Data
+
+## Glass data
+
+### Context
+
+We will read in data from `https://www4.stat.ncsu.edu/~online/datasets/glass.data`. It appears to be delimited using commas. Its variables and descriptions are as follows:
+
+| Variable      | Description                                                                              |
+|------------------------------|------------------------------------------|
+| Id            | Number 1-214                                                                             |
+| RI            | Refractive index                                                                         |
+| Na            | Sodium (unit measurement: weight percent in corresponding oxide, as are attributes 4-10) |
+| Mg            | Magnesium                                                                                |
+| Al            | Aluminum                                                                                 |
+| Si            | Silicon                                                                                  |
+| K             | Potassium                                                                                |
+| Ca            | Calcium                                                                                  |
+| Ba            | Barium                                                                                   |
+| Fe            | Iron                                                                                     |
+| Type of Glass | **various**                                                                              |
+
+
+*Type of Glass* has enumerated values of the following list:
+
+| Number | Value                                                       |
+|--------|-------------------------------------------------------------|
+| 1      | building_windows_float_processed                            |
+| 2      | building_windows_non_float_processed                        |
+| 3      | vehicle_windows_float_processed                             |
+| 4      | vehicle_windows_non_float_processed (none in this database) |
+| 5      | containers                                                  |
+| 6      | tableware                                                   |
+| 7      | headlamps                                                   |
+
+### Requirements
+
+1.  Read into R from URL via tidyverse function, adding my own column names, and printing out the tibble.
+
+```{r}
+glass_names <- c("Id",
+                 "RI",
+                 "Na",
+                 "Mg",
+                 "Al",
+                 "Si",
+                 "K",
+                 "Ca",
+                 "Ba",
+                 "Fe",
+                 "Type of Glass")
+glass_data <- read_csv('https://www4.stat.ncsu.edu/~online/datasets/glass.data',
+         col_names = glass_names)
+glass_data
+```
+
+2.  Create a chain to overwrite the *Type of Glass* field via `mutate()`. Replace the enumerated values with the full text equivalents.
+
+```{r}
+#ignore the 4th element which does not exist in this dataset, to permit factor() to function as desired.
+type_of_glass_factors <- c("building_windows_float_processed",
+                           "building_windows_non_float_processed",
+                           "vehicle_windows_float_processed",
+                           #"vehicle_windows_non_float_processed",
+                           "containers",
+                           "tableware",
+                           "headlamps")
+
+#adjust the type of glass field to string
+glass_data |> 
+  mutate(`Type of Glass` = factor(glass_data$`Type of Glass`,
+                                  labels = type_of_glass_factors,
+                                  ordered = TRUE)
+         )
+```
+
+3.  Continue the chain and **filter** only the observations where `Fe` \< 0.2 and the `Type of Glass` is *tableware* or *headlamp*.
+
+```{r}
+glass_data |> 
+  
+  #adjust the type of glass field to string
+  mutate(`Type of Glass` = factor(glass_data$`Type of Glass`,
+                                  labels = type_of_glass_factors,
+                                  ordered = TRUE)
+         ) |>
+  
+  #filter rows for Fe and Type
+  filter(Fe < 0.2,
+         `Type of Glass` %in% c("tableware","headlamps")
+         )
+  
+```
+
+## Yeast data
+
+### Context
+
+We will read in data from `https://www4.stat.ncsu.edu/~online/datasets/yeast.data`. It appears to be delimited using double spaces, but some values in column 1 have more than two spaces - so it is actually lined up. Its variables and descriptions are as follows:
+
+| Variable | Description                                                                                                                                          |
+|------------------------------------|------------------------------------|
+| eq_name  | Accession number for the SWISS-PROT database                                                                                                         |
+| mcg      | McGeoch’s method for signal sequence recognition.                                                                                                    |
+| gvh      | von Heijne’s method for signal sequence recognition.                                                                                                 |
+| alm      | Score of the ALOM membrane spanning region prediction program.                                                                                       |
+| mit      | Score of discriminant analysis of the amino acid content of the N-terminal region (20 residues long) of mitochondrial andnon-mitochondrial proteins. |
+| erl      | Presence of ‘HDEL’ substring (thought to act as a signal for retention in the endoplasmic reticulum lumen). Binary attribute.                        |
+| pox      | Peroxisomal targeting signal in the C-terminus.                                                                                                      |
+| vac      | Score of discriminant analysis of the amino acid content of vacuolar and extracellular proteins.                                                     |
+| nuc      | Score of discriminant analysis of nuclear localization signals of nuclear and non-nuclear proteins.                                                  |
+| class    | Localization site                                                                                                                                    |
+
+### Requirements
+
+1.  Read into R from URL via tidyverse function, adding my own column names, and printing out the tibble.
+
+```{r}
+yeast_names <- c("seq_name",
+                 "mcg",
+                 "gvh",
+                 "alm",
+                 "mit",
+                 "erl",
+                 "pox",
+                 "vac",
+                 "nuc",
+                 "class"
+                 )
+yeast_data <- read_fwf('https://www4.stat.ncsu.edu/~online/datasets/yeast.data',
+                       #col_names = yeast_names,
+                       fwf_widths(c(12,
+                                    6,
+                                    6,
+                                    6,
+                                    6,
+                                    6,
+                                    6,
+                                    6,
+                                    6,
+                                    3),
+                                  yeast_names)
+                       )
+yeast_data
+```
+
+2.  Begin a chain to remove columns **seq_name** and **nuc**.
+
+```{r}
+yeast_data |>
+  
+  #remove two columns
+  select(-seq_name,
+         -nuc)
+```
+
+3.  Continue the chain to add columns for summary, descriptive statistics. Include mean and median for each numeric variable, grouped by each class.
+
+```{r}
+yeast_data |>
+  
+  #remove two columns
+  select(-seq_name,
+         -nuc) |>
+  
+  #group these by class
+  group_by(class) |>
+  
+  #create mean and median for all numeric columns
+  mutate(
+    across(
+      where(is.numeric),
+      list(mean = mean,
+           median = median),
+      .names = "{.col}_{.fn}"
+    )
+  ) 
+
+```
+
+# Task 3: Combining Excel and Delimited Data
+
+## Context
+
+We will be ingesting data for white and red wine from these locations: - https://www4.stat.ncsu.edu/\~online/datasets/white-wine.xlsx - https://www4.stat.ncsu.edu/\~online/datasets/red-wine.csv
+
+Each dataset will be loaded from a different file format. Their variables and descriptions are as follows:
+
+| Variable             | Type   |
+|----------------------|--------|
+| fixed acidity        | input  |
+| volatile acidity     | input  |
+| citric acid          | input  |
+| residual sugar       | input  |
+| chlorides            | input  |
+| free sulfur dioxide  | input  |
+| total sulfur dioxide | input  |
+| density              | input  |
+| pH                   | input  |
+| sulphates            | input  |
+| alcohol              | input  |
+| quality              | output |
+
+## Requirements
+
+1. Download the Excel version of the white wine dataset, placing it in the working directory for the project. Import the first sheet via `readxl` and show the tibble.
+
+```{r}
+white_wine_data <- readxl::read_xlsx("white-wine.xlsx",
+                                     sheet = 1)
+white_wine_data
+```
+
+2. Read in the second sheet to get nice column names. Overwrite the originals.
+
+```{r}
+#replace column names for WWD with the column of the second sheet
+colnames_white_wine_data <- readxl::read_xlsx("white-wine.xlsx",sheet = 2)
+colnames(white_wine_data) <- colnames_white_wine_data$Variables
+```
+
+3. Add a column to identify wine type as **white**.
+
+```{r}
+white_wine_data$type <- "white"
+```
+
+4. Now, read in the semicolon delimited red wine data. Prep the tibble similarly, with fixed column names and type of **red**.
+
+```{r}
+#read
+red_wine_data <- read_delim("red-wine.csv",delim=";")
+
+#fix column names
+colnames(red_wine_data) <- colnames_white_wine_data$Variables
+
+#add type
+red_wine_data$type <- "red"
+```
+
+5. Using `dplyr::bind_rows()`, combine the two.
+
+```{r}
+full_wine_data <- bind_rows(white_wine_data,red_wine_data)
+```
+
+6. Chain this to filter only high-quality wines (quality > 6.5) and those with a **reasonable** alcohol value (alcohol < 132).
+
+```{r}
+full_wine_data |>
+  filter(quality > 6.5,
+         alcohol < 132)
+```
+
+7. Now sort from highest to lowest quality.
+
+```{r}
+full_wine_data |>
+  filter(quality > 6.5,
+         alcohol < 132) |>
+  arrange(desc(quality))
+```
+
+8. Now select only the columns:
+- **contains** acid
+- alcohol
+- type
+- quality
+
+```{r}
+full_wine_data |>
+  filter(quality > 6.5,
+         alcohol < 132) |>
+  arrange(desc(quality)) |>
+  select(contains("acid"),
+         alcohol,
+         type,
+         quality)
+```
+
+9. Continue chain to add mean, stdev for **alcohol** for each setting of **quality**. To do this, we group by **quality** and then mutate to add mean and sd!
+
+```{r}
+full_wine_data |>
+  filter(quality > 6.5,
+         alcohol < 132) |>
+  arrange(desc(quality)) |>
+  select(contains("acid"),
+         alcohol,
+         type,
+         quality) |>
+  group_by(quality) |>
+  mutate(
+    across(
+      alcohol,
+      list(mean = mean,
+           sd = sd),
+      .names = "{.col}_{.fn}"
+    )
+  )
+```
